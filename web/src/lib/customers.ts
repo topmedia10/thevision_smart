@@ -80,8 +80,9 @@ export async function resolveRecipients(
     if (opts.audience && opts.audience !== "all") {
       if (bucketOf(c, audienceSettings) !== opts.audience) return false;
     }
+    // Exclude anyone who visited within the last filterDays days.
     if (filterCut !== null) {
-      if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() < filterCut)
+      if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() >= filterCut)
         return false;
     }
     return true;
@@ -97,8 +98,8 @@ export async function countManual(
 }
 
 /**
- * Weekly-SMS count: audience bucket + visited within the last filterDays days
- * (filterDays = 0 → no day filter), excluding unsubscribed.
+ * Weekly-SMS count: audience bucket, EXCLUDING anyone who visited within the
+ * last filterDays days (filterDays = 0 → no day filter), excluding unsubscribed.
  */
 export async function countWeekly(
   filterDays: number,
@@ -112,7 +113,7 @@ export async function countWeekly(
     if (audience && audience !== "all" && bucketOf(c, audienceSettings) !== audience)
       return false;
     if (cut !== null) {
-      if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() < cut) return false;
+      if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() >= cut) return false;
     }
     return true;
   }).length;

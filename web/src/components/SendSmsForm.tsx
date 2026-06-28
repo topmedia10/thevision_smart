@@ -125,9 +125,7 @@ export function SendSmsForm({
         </div>
 
         <div>
-          <label className="label">
-            סינון תורים מ-{filterDays || "—"} הימים האחרונים (0 = ללא סינון)
-          </label>
+          <label className="label">סינון תורים מ-{filterDays} הימים האחרונים</label>
           <input
             type="range" min={0} max={10} value={filterDays}
             onChange={(e) => setFilterDays(Number(e.target.value))}
@@ -140,7 +138,9 @@ export function SendSmsForm({
             <>
               כרגע <b>{count}</b> לקוחות תואמים את הסינון · מסתפרים אצל: {empName} ·
               קהל: {AUD_LABEL[audience]} ·{" "}
-              {filterDays > 0 ? `נראו ב-${filterDays} הימים האחרונים` : "ללא סינון ימים"}
+              {filterDays > 0
+                ? `ללא מי שהגיעו ב-${filterDays} הימים האחרונים`
+                : "ללא סינון ימים"}
             </>
           )}
         </div>

@@ -64,8 +64,8 @@ export function audienceBucket(
 
 /**
  * Weekly-SMS recipients: subscribed customers, optionally in an audience bucket,
- * who VISITED within the last `filterDays` days (filterDays = 0 → no day filter).
- * Shared by the weekly send and its pre-check so they always agree.
+ * EXCLUDING anyone who visited within the last `filterDays` days
+ * (filterDays = 0 → no day filter). Shared by the weekly send and its pre-check.
  */
 export async function selectWeeklyRecipients(
   filterDays: number,
@@ -95,8 +95,9 @@ export async function selectWeeklyRecipients(
   return all.filter((c) => {
     if (audienceKind !== "all" && audienceBucket(c, audienceSettings) !== audienceKind)
       return false;
+    // Exclude anyone who visited within the last filterDays days.
     if (cut !== null) {
-      if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() < cut) return false;
+      if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() >= cut) return false;
     }
     return true;
   });
