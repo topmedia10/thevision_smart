@@ -1,0 +1,24 @@
+[Unit]
+Description=The Vision Smart - SQS SMS worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=smartapp
+Group=smartapp
+WorkingDirectory=/opt/thevision-smart
+EnvironmentFile=/etc/thevision-smart.env
+ExecStart=/usr/bin/node /opt/thevision-smart/dist/worker.js
+Restart=always
+RestartSec=5
+# Give in-flight sends time to finish on stop.
+TimeoutStopSec=15
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/thevision-smart
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+.next/
+out/
+
+# CDK
+infra/cdk.out/
+cdk.out/
+infra/cdk-outputs.json
+
+# Env & secrets — NEVER commit these
+.env
+.env.*
+!.env.example
+*.pem
+*-key.json
+firebase-service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

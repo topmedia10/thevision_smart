@@ -1,0 +1,23 @@
+[Unit]
+Description=The Vision Smart - EC2 HTTP API (balance, send-otp)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=smartapp
+Group=smartapp
+WorkingDirectory=/opt/thevision-smart
+EnvironmentFile=/etc/thevision-smart.env
+ExecStart=/usr/bin/node /opt/thevision-smart/dist/server.js
+Restart=always
+RestartSec=3
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/thevision-smart
+
+[Install]
+WantedBy=multi-user.target
