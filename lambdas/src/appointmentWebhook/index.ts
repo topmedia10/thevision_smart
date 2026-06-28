@@ -36,10 +36,15 @@ const json = (status: number, body: unknown): APIGatewayProxyResultV2 => ({
 export const handler = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
-  // --- auth: shared secret header --------------------------------------
+  // --- auth: shared secret via header OR query param -------------------
+  // Booking systems that can only POST JSON (no custom headers) can pass the
+  // secret in the URL: .../webhook/appointment?token=<secret>
   const expected = await getSecretString(process.env.WEBHOOK_SECRET_ARN!);
   const provided =
-    event.headers?.["x-webhook-secret"] ?? event.headers?.["X-Webhook-Secret"];
+    event.headers?.["x-webhook-secret"] ??
+    event.headers?.["X-Webhook-Secret"] ??
+    event.queryStringParameters?.token ??
+    event.queryStringParameters?.secret;
   if (!provided || provided !== expected) {
     return json(401, { ok: false, error: "unauthorized" });
   }

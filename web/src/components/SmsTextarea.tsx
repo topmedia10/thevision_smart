@@ -123,12 +123,12 @@ export function SmsTextarea({
             😊 אימוג'י
           </button>
           {showEmoji && (
-            <div className="absolute z-10 mt-1 grid grid-cols-8 gap-1 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+            <div className="absolute top-full right-0 z-30 mt-1 flex w-72 max-h-56 flex-wrap gap-1 overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
               {EMOJIS.map((e) => (
                 <button
                   key={e}
                   type="button"
-                  className="text-xl hover:bg-gray-100 rounded"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl leading-none hover:bg-gray-100"
                   onClick={() => {
                     insertAtCursor(e);
                     setShowEmoji(false);
