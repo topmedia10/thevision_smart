@@ -31,6 +31,7 @@ export interface WeeklySmsSettings {
   dayOfWeek?: number;
   time?: string;
   filterDays?: number;
+  audience?: string; // "all" | "active" | "stopped" | "inactive"
   message?: string;
 }
 export interface WeeklyPushSettings {

@@ -3,39 +3,117 @@
 @tailwind utilities;
 
 :root {
-  --background: #f5f7fb;
-  --foreground: #1a1f36;
+  color-scheme: dark;
+  --bg: #0a0d14;
+  --surface: #131824;
+  --surface-2: #1a2130;
+  --surface-3: #222a3b;
+  --border: #283145;
+  --border-soft: #1d2536;
+  --text: #e8ebf2;
+  --muted: #98a2b6;
+  --faint: #66708a;
+  --brand: #6d6af8;
+  --brand-2: #8b5cf6;
+  --brand-weak: rgba(109, 106, 248, 0.14);
+  --success: #34d399;
+  --danger: #f87171;
+  --warn: #fbbf24;
 }
 
-html,
-body {
-  background: var(--background);
-  color: var(--foreground);
+html {
+  background: var(--bg);
 }
-
 body {
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgba(109, 106, 248, 0.08), transparent 60%),
+    radial-gradient(1000px 500px at -10% 10%, rgba(139, 92, 246, 0.06), transparent 55%),
+    var(--bg);
+  color: var(--text);
   font-family: var(--font-heebo), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
 }
 
-/* RTL-friendly utility tweaks */
-.card {
-  @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-5;
+h1, h2, h3 { letter-spacing: -0.01em; }
+
+/* ---- Base form controls (dark by default) ---- */
+input, select, textarea {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
 }
-.btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed;
-}
-.btn-primary {
-  @apply btn bg-brand-500 text-white hover:bg-brand-600;
-}
-.btn-secondary {
-  @apply btn bg-gray-100 text-gray-800 hover:bg-gray-200;
-}
-.input {
-  @apply w-full rounded-xl border border-gray-200 px-3 py-2 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
-}
-.label {
-  @apply block text-sm font-medium text-gray-700 mb-1;
-}
-.toolbtn {
-  @apply text-sm rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer;
+::placeholder { color: var(--faint); }
+input:focus, select, textarea:focus { outline: none; }
+select option { background: var(--surface-2); color: var(--text); }
+
+/* ---- Scrollbar ---- */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+::selection { background: var(--brand-weak); }
+
+@layer components {
+  .card {
+    @apply rounded-2xl p-5;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -20px rgba(0, 0, 0, 0.8);
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    @apply rounded-2xl;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn text-white;
+    background: linear-gradient(180deg, var(--brand), var(--brand-2));
+    box-shadow: 0 8px 24px -8px rgba(109, 106, 248, 0.5);
+  }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-secondary {
+    @apply btn;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--surface-3); }
+  .input {
+    @apply w-full rounded-xl px-3 py-2 transition;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .input:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-weak);
+  }
+  .label {
+    @apply block text-sm font-medium mb-1.5;
+    color: var(--muted);
+  }
+  .toolbtn {
+    @apply text-sm rounded-lg px-2.5 py-1.5 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .toolbtn:hover:not(:disabled) { background: var(--surface-3); }
+  .muted { color: var(--muted); }
+  .faint { color: var(--faint); }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    background: var(--brand-weak);
+    color: var(--brand);
+  }
+  .info-bar {
+    @apply rounded-xl px-4 py-3 text-sm;
+    background: var(--brand-weak);
+    border: 1px solid rgba(109, 106, 248, 0.25);
+    color: #c9c8fb;
+  }
 }

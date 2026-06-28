@@ -12,7 +12,6 @@ export const TABLES = {
   settings: process.env.TABLE_SETTINGS!,
   savedMessages: process.env.TABLE_SAVED_MESSAGES!,
   smsActivityLog: process.env.TABLE_SMS_ACTIVITY_LOG!,
-  deviceTokens: process.env.TABLE_DEVICE_TOKENS!,
   smsIdempotency: process.env.TABLE_SMS_IDEMPOTENCY!,
 };
 

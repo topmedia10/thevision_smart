@@ -3,7 +3,7 @@ import { v4 as uuid } from "uuid";
 import { requireAdmin } from "@/lib/auth";
 import { listEmployees } from "@/lib/employees";
 import { getSettings, AudienceSettings, patchSettings } from "@/lib/settings";
-import { resolveRecipients, AudienceKind } from "@/lib/customers";
+import { resolveRecipients, countManual, AudienceKind } from "@/lib/customers";
 import { enqueueSms, SmsJob } from "@/lib/sqs";
 import { renderMessage } from "@/lib/vars";
 
@@ -58,6 +58,23 @@ export async function sendManualAction(formData: FormData): Promise<SendResult> 
   });
 
   return { ok: true, count: jobs.length };
+}
+
+export async function countManualAction(input: {
+  audience: string;
+  employeeId: string;
+  filterDays: number;
+}): Promise<number> {
+  await requireAdmin();
+  const audienceSettings = await getSettings<AudienceSettings>("audience");
+  return countManual(
+    {
+      audience: input.audience as AudienceKind | "all",
+      employeeId: input.employeeId,
+      filterDays: input.filterDays,
+    },
+    audienceSettings,
+  );
 }
 
 export async function sendTestAction(formData: FormData): Promise<SendResult> {

@@ -1,11 +1,23 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SmsTextarea, BusinessInfo } from "./SmsTextarea";
 import { PhonePreview } from "./PhonePreview";
-import { sendManualAction, sendTestAction, SendResult } from "@/app/(admin)/sms/actions";
+import {
+  sendManualAction,
+  sendTestAction,
+  countManualAction,
+  SendResult,
+} from "@/app/(admin)/sms/actions";
 
 interface SavedMsg { id: string; title: string; body: string }
 interface EmpOpt { employeeId: string; name: string }
+
+const AUD_LABEL: Record<string, string> = {
+  all: "כל הלקוחות",
+  active: "פעילים",
+  stopped: "הפסיקו להגיע",
+  inactive: "לא פעילים",
+};
 
 export function SendSmsForm({
   business,
@@ -16,12 +28,7 @@ export function SendSmsForm({
   business: BusinessInfo;
   saved: SavedMsg[];
   employees: EmpOpt[];
-  defaults: {
-    message?: string;
-    employeeId?: string;
-    audience?: string;
-    filterDays?: number;
-  };
+  defaults: { message?: string; employeeId?: string; audience?: string; filterDays?: number };
 }) {
   const [message, setMessage] = useState(defaults.message || "");
   const [employeeId, setEmployeeId] = useState(defaults.employeeId || "all");
@@ -29,6 +36,21 @@ export function SendSmsForm({
   const [filterDays, setFilterDays] = useState(defaults.filterDays || 0);
   const [busy, setBusy] = useState<"send" | "test" | null>(null);
   const [result, setResult] = useState<SendResult | null>(null);
+  const [count, setCount] = useState<number | null>(null);
+
+  // Live recipient count whenever the filters change.
+  useEffect(() => {
+    let cancelled = false;
+    setCount(null);
+    const t = setTimeout(async () => {
+      const n = await countManualAction({ audience, employeeId, filterDays });
+      if (!cancelled) setCount(n);
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [audience, employeeId, filterDays]);
 
   function buildForm() {
     const fd = new FormData();
@@ -38,26 +60,27 @@ export function SendSmsForm({
     fd.set("filterDays", String(filterDays));
     return fd;
   }
-
   async function onSend() {
     if (!confirm("לשלוח את ההודעה לכל הנמענים שתואמים את הסינון?")) return;
     setBusy("send");
     setResult(null);
-    const r = await sendManualAction(buildForm());
-    setResult(r);
+    setResult(await sendManualAction(buildForm()));
     setBusy(null);
   }
   async function onTest() {
     setBusy("test");
     setResult(null);
-    const r = await sendTestAction(buildForm());
-    setResult(r);
+    setResult(await sendTestAction(buildForm()));
     setBusy(null);
   }
 
+  const empName = employeeId === "all"
+    ? "כל הספרים"
+    : employees.find((e) => e.employeeId === employeeId)?.name || employeeId;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-      <div className="space-y-4">
+      <div className="card space-y-4 h-fit">
         <div>
           <label className="label">הודעה שמורה</label>
           <select
@@ -70,9 +93,7 @@ export function SendSmsForm({
           >
             <option value="">בחרו הודעה שמורה...</option>
             {saved.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title}
-              </option>
+              <option key={s.id} value={s.id}>{s.title}</option>
             ))}
           </select>
         </div>
@@ -80,26 +101,16 @@ export function SendSmsForm({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="label">מסתפרים אצל</label>
-            <select
-              className="input"
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-            >
+            <select className="input" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
               <option value="all">כל הספרים</option>
               {employees.map((e) => (
-                <option key={e.employeeId} value={e.employeeId}>
-                  {e.name}
-                </option>
+                <option key={e.employeeId} value={e.employeeId}>{e.name}</option>
               ))}
             </select>
           </div>
           <div>
             <label className="label">קהל לקוחות</label>
-            <select
-              className="input"
-              value={audience}
-              onChange={(e) => setAudience(e.target.value)}
-            >
+            <select className="input" value={audience} onChange={(e) => setAudience(e.target.value)}>
               <option value="all">כל הלקוחות</option>
               <option value="active">פעילים</option>
               <option value="stopped">הפסיקו להגיע</option>
@@ -118,19 +129,21 @@ export function SendSmsForm({
             סינון תורים מ-{filterDays || "—"} הימים האחרונים (0 = ללא סינון)
           </label>
           <input
-            type="range"
-            min={0}
-            max={10}
-            value={filterDays}
+            type="range" min={0} max={10} value={filterDays}
             onChange={(e) => setFilterDays(Number(e.target.value))}
             className="w-full"
           />
         </div>
 
-        <p className="text-xs text-amber-600">
-          ⚠️ תזכורת: הודעות שיווקיות מחויבות לכלול את המילה &quot;פרסומת&quot;,
-          את שם העסק ואפשרות הסרה.
-        </p>
+        <div className="info-bar">
+          {count === null ? "מחשב נמענים..." : (
+            <>
+              כרגע <b>{count}</b> לקוחות תואמים את הסינון · מסתפרים אצל: {empName} ·
+              קהל: {AUD_LABEL[audience]} ·{" "}
+              {filterDays > 0 ? `נראו ב-${filterDays} הימים האחרונים` : "ללא סינון ימים"}
+            </>
+          )}
+        </div>
 
         <div className="flex gap-3">
           <button className="btn-primary" onClick={onSend} disabled={busy !== null}>
@@ -142,9 +155,7 @@ export function SendSmsForm({
         </div>
 
         {result && (
-          <div
-            className={`text-sm ${result.ok ? "text-green-600" : "text-red-600"}`}
-          >
+          <div className="text-sm" style={{ color: result.ok ? "var(--success)" : "var(--danger)" }}>
             {result.ok
               ? `נשלח בהצלחה ל-${result.count} נמענים (ההודעות בתור השליחה)`
               : result.error}

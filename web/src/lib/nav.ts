@@ -14,9 +14,9 @@ export const NAV: NavItem[] = [
     children: [
       { href: "/sms", label: "שליחת SMS" },
       { href: "/sms/saved", label: "הודעות שמורות" },
-      { href: "/sms/report", label: "דוח פעילות SMS" },
     ],
   },
+  { href: "/report", label: "דוח פעילות SMS", icon: "📈" },
   { href: "/push", label: "שליחת פוש", icon: "🔔" },
   { href: "/automation/welcome", label: "אוטומציית ברוך הבא", icon: "👋" },
   { href: "/automation/reviews", label: "אוטומציית ביקורות", icon: "⭐" },

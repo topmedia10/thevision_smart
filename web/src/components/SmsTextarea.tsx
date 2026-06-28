@@ -44,9 +44,7 @@ export function SmsTextarea({
     }
     const start = el.selectionStart ?? value.length;
     const end = el.selectionEnd ?? value.length;
-    const next = value.slice(0, start) + text + value.slice(end);
-    onChange(next);
-    // restore caret after the inserted text
+    onChange(value.slice(0, start) + text + value.slice(end));
     requestAnimationFrame(() => {
       el.focus();
       const pos = start + text.length;
@@ -54,10 +52,18 @@ export function SmsTextarea({
     });
   }
 
+  const wrap = {
+    background: "var(--surface-2)",
+    border: "1px solid var(--border)",
+  };
+
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white">
+    <div className="rounded-2xl overflow-hidden" style={wrap}>
       {/* toolbar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 p-2">
+      <div
+        className="flex flex-wrap items-center gap-2 p-2"
+        style={{ borderBottom: "1px solid var(--border-soft)" }}
+      >
         <ToolSelect
           placeholder="פנייה אישית"
           options={PERSONAL_TOKENS.map((t) => ({ label: t.label, value: t.token }))}
@@ -74,9 +80,7 @@ export function SmsTextarea({
             { label: "שם העסק", value: business.businessName || "" },
             {
               label: "כתובת",
-              value: business.businessAddress
-                ? `${business.businessAddress} 📍`
-                : "",
+              value: business.businessAddress ? `${business.businessAddress} 📍` : "",
             },
           ]}
           onPick={(v) => v && insertAtCursor(v)}
@@ -95,10 +99,7 @@ export function SmsTextarea({
         <button
           type="button"
           className="toolbtn"
-          onClick={() =>
-            business.googleReviewLink &&
-            insertAtCursor(business.googleReviewLink)
-          }
+          onClick={() => business.googleReviewLink && insertAtCursor(business.googleReviewLink)}
           disabled={!business.googleReviewLink}
         >
           קישור לביקורת גוגל
@@ -115,20 +116,19 @@ export function SmsTextarea({
           הסרה
         </button>
         <div className="relative">
-          <button
-            type="button"
-            className="toolbtn"
-            onClick={() => setShowEmoji((s) => !s)}
-          >
+          <button type="button" className="toolbtn" onClick={() => setShowEmoji((s) => !s)}>
             😊 אימוג'י
           </button>
           {showEmoji && (
-            <div className="absolute top-full right-0 z-30 mt-1 flex w-72 max-h-56 flex-wrap gap-1 overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+            <div
+              className="absolute top-full right-0 z-30 mt-1 flex w-72 max-h-56 flex-wrap gap-1 overflow-y-auto rounded-xl p-2 shadow-soft"
+              style={{ background: "var(--surface-3)", border: "1px solid var(--border)" }}
+            >
               {EMOJIS.map((e) => (
                 <button
                   key={e}
                   type="button"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl leading-none hover:bg-gray-100"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl leading-none hover:bg-white/10"
                   onClick={() => {
                     insertAtCursor(e);
                     setShowEmoji(false);
@@ -147,33 +147,39 @@ export function SmsTextarea({
         ref={ref}
         dir={dir}
         rows={rows}
-        className="w-full resize-y px-3 py-2 outline-none"
+        className="w-full resize-y px-3 py-3 outline-none bg-transparent border-0"
+        style={{ background: "transparent" }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="כתבו כאן את תוכן ההודעה..."
       />
 
-      {/* footer: direction + counter */}
-      <div className="flex items-center justify-between border-t border-gray-100 p-2">
+      {/* footer */}
+      <div
+        className="flex items-center justify-between p-2"
+        style={{ borderTop: "1px solid var(--border-soft)" }}
+      >
         <div className="flex gap-1">
           <button
             type="button"
-            className={`toolbtn ${dir === "rtl" ? "bg-brand-50 text-brand-700" : ""}`}
+            className="toolbtn"
             onClick={() => setDir("rtl")}
+            style={dir === "rtl" ? { background: "var(--brand-weak)", color: "#c9c8fb" } : {}}
             title="ימין לשמאל"
           >
             ⇥
           </button>
           <button
             type="button"
-            className={`toolbtn ${dir === "ltr" ? "bg-brand-50 text-brand-700" : ""}`}
+            className="toolbtn"
             onClick={() => setDir("ltr")}
+            style={dir === "ltr" ? { background: "var(--brand-weak)", color: "#c9c8fb" } : {}}
             title="שמאל לימין"
           >
             ⇤
           </button>
         </div>
-        <div className={`text-sm ${overOne ? "text-red-600 font-medium" : "text-gray-500"}`}>
+        <div className="text-sm" style={{ color: overOne ? "var(--danger)" : "var(--muted)" }}>
           {chars}/{cap} · ההודעה תחוייב ב- {messages} הודעות
         </div>
       </div>
@@ -192,7 +198,7 @@ function ToolSelect({
 }) {
   return (
     <select
-      className="toolbtn appearance-none"
+      className="toolbtn"
       value=""
       onChange={(e) => {
         if (e.target.value) onPick(e.target.value);

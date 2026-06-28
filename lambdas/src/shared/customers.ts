@@ -40,6 +40,28 @@ export async function queryReviewDue(nowIso: string): Promise<Customer[]> {
   return out;
 }
 
+export type AudienceKind = "active" | "stopped" | "inactive";
+
+function monthsAgoMs(months: number): number {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return d.getTime();
+}
+
+/** Bucket a customer by lastVisitAt against audience thresholds (months). */
+export function audienceBucket(
+  c: Customer,
+  s: { activeMonths?: number; stoppedMonths?: number; inactiveMonths?: number },
+): AudienceKind | null {
+  if (!c.lastVisitAt) return null;
+  const v = new Date(c.lastVisitAt).getTime();
+  if (v >= monthsAgoMs(s.activeMonths ?? 3)) return "active";
+  if (v < monthsAgoMs(s.stoppedMonths ?? 6) && v >= monthsAgoMs(s.inactiveMonths ?? 12))
+    return "stopped";
+  if (v < monthsAgoMs(s.inactiveMonths ?? 12)) return "inactive";
+  return null;
+}
+
 /**
  * Weekly-SMS audience: lastVisitAt < cutoffIso AND unsubscribe="0".
  * (Scan with filter; the customer base is small per-business.)

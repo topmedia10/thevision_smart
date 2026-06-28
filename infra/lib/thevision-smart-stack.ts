@@ -82,12 +82,6 @@ export class TheVisionSmartStack extends cdk.Stack {
       ...common,
     });
 
-    const deviceTokens = new dynamodb.Table(this, "DeviceTokens", {
-      tableName: TABLES.deviceTokens,
-      partitionKey: { name: "token", type: dynamodb.AttributeType.STRING },
-      ...common,
-    });
-
     const smsIdempotency = new dynamodb.Table(this, "SmsIdempotency", {
       tableName: TABLES.smsIdempotency,
       partitionKey: { name: "dedupKey", type: dynamodb.AttributeType.STRING },
@@ -101,7 +95,6 @@ export class TheVisionSmartStack extends cdk.Stack {
       settings,
       savedMessages,
       smsActivityLog,
-      deviceTokens,
       smsIdempotency,
     ];
 
@@ -152,7 +145,6 @@ export class TheVisionSmartStack extends cdk.Stack {
       TABLE_SETTINGS: TABLES.settings,
       TABLE_SAVED_MESSAGES: TABLES.savedMessages,
       TABLE_SMS_ACTIVITY_LOG: TABLES.smsActivityLog,
-      TABLE_DEVICE_TOKENS: TABLES.deviceTokens,
       TABLE_SMS_IDEMPOTENCY: TABLES.smsIdempotency,
       GSI_REVIEW_INDEX: GSI.reviewIndex,
       GSI_PHONE_INDEX: GSI.phoneIndex,
@@ -216,11 +208,6 @@ export class TheVisionSmartStack extends cdk.Stack {
       "Timeout",
       120,
     );
-    const registerDeviceFn = makeFn(
-      "RegisterDeviceFn",
-      LAMBDAS.registerDevice,
-    );
-
     const allFns = [
       appointmentWebhookFn,
       reviewsAutomationFn,
@@ -228,7 +215,6 @@ export class TheVisionSmartStack extends cdk.Stack {
       weeklyPrecheckFn,
       balanceMonitorFn,
       sendPushFn,
-      registerDeviceFn,
     ];
 
     // ---- Lambda IAM grants -------------------------------------------------
@@ -253,10 +239,7 @@ export class TheVisionSmartStack extends cdk.Stack {
     employees.grantReadData(balanceMonitorFn);
     settings.grantReadWriteData(balanceMonitorFn); // toggles runtime.lowBalanceAlerted
 
-    deviceTokens.grantReadWriteData(sendPushFn);
     settings.grantReadWriteData(sendPushFn); // writes runtime.lastPush*
-
-    deviceTokens.grantReadWriteData(registerDeviceFn);
 
     // SQS: producers
     outbox.grantSendMessages(appointmentWebhookFn);
@@ -293,15 +276,6 @@ export class TheVisionSmartStack extends cdk.Stack {
         appointmentWebhookFn,
       ),
     });
-    httpApi.addRoutes({
-      path: "/devices/register",
-      methods: [apigwv2.HttpMethod.POST],
-      integration: new HttpLambdaIntegration(
-        "RegisterDeviceIntegration",
-        registerDeviceFn,
-      ),
-    });
-
     // ------------------------------------------------------------------
     // 6. EventBridge Scheduler
     // ------------------------------------------------------------------
@@ -474,7 +448,6 @@ export class TheVisionSmartStack extends cdk.Stack {
 
     out("PublicApiUrl", httpApi.apiEndpoint, "API Gateway base URL");
     out("WebhookUrl", `${httpApi.apiEndpoint}/webhook/appointment`);
-    out("DeviceRegisterUrl", `${httpApi.apiEndpoint}/devices/register`);
     out("SqsQueueUrl", outbox.queueUrl);
     out("SqsQueueArn", outbox.queueArn);
     out("Ec2InstanceProfileName", ec2InstanceProfile.ref);

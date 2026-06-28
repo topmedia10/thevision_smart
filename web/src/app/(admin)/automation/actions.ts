@@ -1,7 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
-import { putSettings } from "@/lib/settings";
+import { putSettings, getSettings, AudienceSettings } from "@/lib/settings";
+import { countWeekly, AudienceKind } from "@/lib/customers";
 import {
   updateWeeklySmsSchedules,
   updateWeeklyPushSchedule,
@@ -44,6 +45,7 @@ export async function saveWeeklySmsAction(formData: FormData): Promise<SaveResul
     dayOfWeek,
     time,
     filterDays,
+    audience: String(formData.get("audience") || "all"),
     message: String(formData.get("message") || ""),
   });
   try {
@@ -53,6 +55,19 @@ export async function saveWeeklySmsAction(formData: FormData): Promise<SaveResul
   }
   revalidatePath("/automation/weekly-sms");
   return { ok: true };
+}
+
+export async function countWeeklyAction(input: {
+  audience: string;
+  filterDays: number;
+}): Promise<number> {
+  await requireAdmin();
+  const audienceSettings = await getSettings<AudienceSettings>("audience");
+  return countWeekly(
+    input.filterDays,
+    input.audience as AudienceKind | "all",
+    audienceSettings,
+  );
 }
 
 export async function saveWeeklyPushAction(formData: FormData): Promise<SaveResult> {

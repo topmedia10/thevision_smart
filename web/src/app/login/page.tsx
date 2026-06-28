@@ -40,8 +40,8 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className="card w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="text-3xl font-bold text-brand-600">סמארט</div>
-          <div className="text-sm text-gray-500 mt-1">כניסה למערכת הניהול</div>
+          <div className="text-3xl font-bold" style={{ color: "#928ff8" }}>סמארט</div>
+          <div className="text-sm muted mt-1">כניסה למערכת הניהול</div>
         </div>
 
         {step === "phone" ? (
@@ -59,16 +59,14 @@ export default function LoginPage() {
                 required
               />
             </div>
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+            {error && <p className="text-sm" style={{ color: "var(--danger)" }}>{error}</p>}
             <button className="btn-primary w-full" disabled={loading}>
               {loading ? "שולח..." : "שליחת קוד"}
             </button>
           </form>
         ) : (
           <form onSubmit={submitOtp} className="space-y-4">
-            <p className="text-sm text-gray-600">
-              נשלח קוד בן 6 ספרות למספר {phone}
-            </p>
+            <p className="text-sm muted">נשלח קוד בן 6 ספרות למספר {phone}</p>
             <div>
               <label className="label">קוד אימות</label>
               <input
@@ -82,13 +80,13 @@ export default function LoginPage() {
                 required
               />
             </div>
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+            {error && <p className="text-sm" style={{ color: "var(--danger)" }}>{error}</p>}
             <button className="btn-primary w-full" disabled={loading}>
               {loading ? "מאמת..." : "כניסה"}
             </button>
             <button
               type="button"
-              className="text-sm text-gray-500 hover:underline w-full"
+              className="text-sm muted hover:underline w-full"
               onClick={() => {
                 setStep("phone");
                 setCode("");

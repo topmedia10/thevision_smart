@@ -5,8 +5,9 @@ import {
   getSettings,
   WeeklySmsSettings,
   AlertsSettings,
+  AudienceSettings,
 } from "../shared/settings";
-import { scanWeeklyAudience } from "../shared/customers";
+import { scanWeeklyAudience, audienceBucket } from "../shared/customers";
 import { enqueueSms, SmsJob } from "../shared/sqs";
 import { renderMessage } from "../shared/vars";
 import { isoDaysAgo, jerusalemDateKey } from "../shared/dates";
@@ -34,7 +35,17 @@ export const handler = async (): Promise<void> => {
 
   const filterDays = Number(weekly.filterDays ?? 1);
   const cutoff = isoDaysAgo(filterDays);
-  const audience = await scanWeeklyAudience(cutoff);
+  let audience = await scanWeeklyAudience(cutoff);
+
+  // Optional audience-bucket filter (פעילים / הפסיקו / לא פעילים).
+  const audienceKind = weekly.audience ?? "all";
+  if (audienceKind !== "all") {
+    const audienceSettings = await getSettings<AudienceSettings>("audience");
+    audience = audience.filter(
+      (c) => audienceBucket(c, audienceSettings) === audienceKind,
+    );
+  }
+
   if (!audience.length) {
     console.log("weekly sms: no recipients");
     return;

@@ -57,15 +57,15 @@ export default function UnsubscribePage() {
       <Script src="https://www.google.com/recaptcha/api.js" async defer />
       <div className="card w-full max-w-md">
         <div className="text-center mb-5">
-          <div className="text-2xl font-bold text-brand-600">הסרה מרשימת התפוצה</div>
+          <div className="text-2xl font-bold" style={{ color: "#928ff8" }}>הסרה מרשימת התפוצה</div>
         </div>
         {status === "done" ? (
-          <p className="text-center text-green-600">
+          <p className="text-center" style={{ color: "var(--success)" }}>
             הבקשה התקבלה. אם המספר קיים ברשימה, הוא הוסר בהצלחה.
           </p>
         ) : (
           <form onSubmit={submit} className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm muted">
               אנא הזינו את מספר הטלפון הנייד שלכם לצורך הסרה מרשימת התפוצה
             </p>
             <input
@@ -79,7 +79,7 @@ export default function UnsubscribePage() {
               required
             />
             {siteKey && <div ref={captchaRef} />}
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+            {error && <p className="text-sm" style={{ color: "var(--danger)" }}>{error}</p>}
             <button className="btn-primary w-full" disabled={busy}>
               {busy ? "מעבד..." : "הסרה"}
             </button>

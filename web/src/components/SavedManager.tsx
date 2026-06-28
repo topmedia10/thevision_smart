@@ -83,13 +83,13 @@ export function SavedManager({
 
       <div className="space-y-2">
         {initial.length === 0 && !editing && (
-          <p className="text-gray-400 text-sm">אין הודעות שמורות עדיין</p>
+          <p className="faint text-sm">אין הודעות שמורות עדיין</p>
         )}
         {initial.map((m) => (
           <div key={m.id} className="card flex justify-between items-start gap-4">
             <div className="min-w-0">
               <div className="font-semibold">{m.title}</div>
-              <div className="text-sm text-gray-500 whitespace-pre-wrap line-clamp-2">
+              <div className="text-sm muted whitespace-pre-wrap line-clamp-2">
                 {m.body}
               </div>
             </div>
@@ -98,7 +98,8 @@ export function SavedManager({
                 עריכה
               </button>
               <button
-                className="toolbtn text-red-600"
+                className="toolbtn"
+                style={{ color: "var(--danger)" }}
                 onClick={() => remove(m.id)}
               >
                 מחיקה

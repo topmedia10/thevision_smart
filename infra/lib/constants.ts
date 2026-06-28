@@ -17,7 +17,6 @@ export const TABLES = {
   settings: "smart-settings",
   savedMessages: "smart-saved-messages",
   smsActivityLog: "smart-sms-activity-log",
-  deviceTokens: "smart-device-tokens",
   smsIdempotency: "smart-sms-idempotency",
 } as const;
 
@@ -38,7 +37,6 @@ export const LAMBDAS = {
   weeklyPrecheck: "smart-weeklyPrecheck",
   balanceMonitor: "smart-balanceMonitor",
   sendPush: "smart-sendPush",
-  registerDevice: "smart-registerDevice",
 } as const;
 
 export const SCHEDULES = {

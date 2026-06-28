@@ -91,7 +91,7 @@ export function SettingsForm({
             <input type="number" min={1} max={12} className="input" value={inactive} onChange={(e) => setInactive(Number(e.target.value))} />
           </div>
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs muted">
           &quot;הפסיקו להגיע&quot; הוא הטווח שבין הסף שלו לסף &quot;לא פעילים&quot; (חייב להיות קטן ממנו).
         </p>
       </section>
@@ -102,7 +102,7 @@ export function SettingsForm({
           <label className="label">שלח התראה כשהיתרה יורדת מתחת ל-</label>
           <input type="number" min={0} className="input w-40" value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} />
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs muted">
           הערה: בהודעות התראה לאנשי צוות אין החלפת משתני לקוח (שם_פרטי וכו&apos;).
         </p>
         <div>
@@ -120,7 +120,7 @@ export function SettingsForm({
           {busy ? "שומר..." : "שמירת הגדרות"}
         </button>
         {res && (
-          <span className={`text-sm ${res.ok ? "text-green-600" : "text-red-600"}`}>
+          <span className="text-sm" style={{ color: res.ok ? "var(--success)" : "var(--danger)" }}>
             {res.ok ? "נשמר בהצלחה ✓" : res.error}
           </span>
         )}

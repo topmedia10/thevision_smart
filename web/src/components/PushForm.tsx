@@ -2,8 +2,15 @@
 import { useState } from "react";
 import { sendPushAction } from "@/app/(admin)/push/actions";
 import { PushResult } from "@/lib/lambda";
+import { PushPreview } from "./PushPreview";
 
-export function PushForm({ lastSentAt }: { lastSentAt?: string }) {
+export function PushForm({
+  lastSentAt,
+  businessName,
+}: {
+  lastSentAt?: string;
+  businessName?: string;
+}) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,34 +29,32 @@ export function PushForm({ lastSentAt }: { lastSentAt?: string }) {
   }
 
   return (
-    <div className="card max-w-xl space-y-4">
-      <div className="text-sm text-gray-500">
-        פוש אחרון נשלח:{" "}
-        <span className="font-semibold">
-          {lastSentAt ? new Date(lastSentAt).toLocaleString("he-IL") : "טרם נשלח"}
-        </span>
-      </div>
-      <div>
-        <label className="label">כותרת</label>
-        <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
-      </div>
-      <div>
-        <label className="label">תוכן</label>
-        <textarea
-          className="input"
-          rows={4}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-        />
-      </div>
-      <button className="btn-primary" onClick={send} disabled={busy}>
-        {busy ? "שולח..." : "שליחת פוש"}
-      </button>
-      {result && (
-        <div className={`text-sm ${result.ok ? "text-green-600" : "text-red-600"}`}>
-          {result.ok ? "ההתראה נשלחה ✓" : `שגיאה: ${result.error}`}
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+      <div className="card max-w-xl space-y-4 h-fit">
+        <div className="muted text-sm">
+          פוש אחרון נשלח:{" "}
+          <span className="font-semibold" style={{ color: "var(--text)" }}>
+            {lastSentAt ? new Date(lastSentAt).toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" }) : "טרם נשלח"}
+          </span>
         </div>
-      )}
+        <div>
+          <label className="label">כותרת</label>
+          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
+        </div>
+        <div>
+          <label className="label">תוכן</label>
+          <textarea className="input" rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
+        </div>
+        <button className="btn-primary" onClick={send} disabled={busy}>
+          {busy ? "שולח..." : "שליחת פוש"}
+        </button>
+        {result && (
+          <div className="text-sm" style={{ color: result.ok ? "var(--success)" : "var(--danger)" }}>
+            {result.ok ? "ההתראה נשלחה ✓" : `שגיאה: ${result.error}`}
+          </div>
+        )}
+      </div>
+      <PushPreview appName={businessName || "The Vision"} title={title} body={body} />
     </div>
   );
 }

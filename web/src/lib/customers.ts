@@ -88,16 +88,32 @@ export async function resolveRecipients(
   });
 }
 
-/** Count for the weekly-SMS page: lastVisitAt older than filterDays days. */
-export async function countWeeklyMatch(filterDays: number): Promise<number> {
+/** Count manual-send recipients matching the current filters. */
+export async function countManual(
+  opts: ResolveOpts,
+  audienceSettings: AudienceSettings,
+): Promise<number> {
+  return (await resolveRecipients(opts, audienceSettings)).length;
+}
+
+/**
+ * Weekly-SMS audience: NOT visited in the last filterDays days, optionally
+ * intersected with an audience bucket, excluding unsubscribed.
+ */
+export async function countWeekly(
+  filterDays: number,
+  audience: AudienceKind | "all",
+  audienceSettings: AudienceSettings,
+): Promise<number> {
   const cut = Date.now() - filterDays * 86400000;
   const all = await scanAll();
-  return all.filter(
-    (c) =>
-      (!c.unsubscribe || c.unsubscribe === "0") &&
-      c.lastVisitAt &&
-      new Date(c.lastVisitAt).getTime() < cut,
-  ).length;
+  return all.filter((c) => {
+    if (c.unsubscribe && c.unsubscribe !== "0") return false;
+    if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() >= cut) return false;
+    if (audience && audience !== "all" && bucketOf(c, audienceSettings) !== audience)
+      return false;
+    return true;
+  }).length;
 }
 
 /** Map employeeId → assigned customer count (for the employees page). */
