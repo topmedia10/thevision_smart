@@ -97,21 +97,23 @@ export async function countManual(
 }
 
 /**
- * Weekly-SMS audience: NOT visited in the last filterDays days, optionally
- * intersected with an audience bucket, excluding unsubscribed.
+ * Weekly-SMS count: audience bucket + visited within the last filterDays days
+ * (filterDays = 0 → no day filter), excluding unsubscribed.
  */
 export async function countWeekly(
   filterDays: number,
   audience: AudienceKind | "all",
   audienceSettings: AudienceSettings,
 ): Promise<number> {
-  const cut = Date.now() - filterDays * 86400000;
+  const cut = filterDays > 0 ? Date.now() - filterDays * 86400000 : null;
   const all = await scanAll();
   return all.filter((c) => {
     if (c.unsubscribe && c.unsubscribe !== "0") return false;
-    if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() >= cut) return false;
     if (audience && audience !== "all" && bucketOf(c, audienceSettings) !== audience)
       return false;
+    if (cut !== null) {
+      if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() < cut) return false;
+    }
     return true;
   }).length;
 }

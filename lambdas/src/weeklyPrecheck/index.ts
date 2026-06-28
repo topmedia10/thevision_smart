@@ -1,6 +1,10 @@
-import { getSettings, WeeklySmsSettings, AlertsSettings } from "../shared/settings";
-import { scanWeeklyAudience } from "../shared/customers";
-import { isoDaysAgo } from "../shared/dates";
+import {
+  getSettings,
+  WeeklySmsSettings,
+  AlertsSettings,
+  AudienceSettings,
+} from "../shared/settings";
+import { selectWeeklyRecipients } from "../shared/customers";
 import { getSmsBalance } from "../shared/ec2";
 import { sendOperationalAlert } from "../shared/alerts";
 
@@ -15,9 +19,14 @@ export const handler = async (): Promise<void> => {
     return;
   }
 
-  const filterDays = Number(weekly.filterDays ?? 1);
-  const audience = await scanWeeklyAudience(isoDaysAgo(filterDays));
-  const count = audience.length;
+  const filterDays = Number(weekly.filterDays ?? 0);
+  const audienceSettings = await getSettings<AudienceSettings>("audience");
+  const recipients = await selectWeeklyRecipients(
+    filterDays,
+    weekly.audience ?? "all",
+    audienceSettings,
+  );
+  const count = recipients.length;
   if (count === 0) {
     console.log("weekly precheck: no recipients");
     return;

@@ -213,9 +213,11 @@ export function WeeklySmsForm({
         </div>
 
         <div>
-          <label className="label">סינון תורים מ-{filterDays} הימים האחרונים</label>
+          <label className="label">
+            סינון תורים מ-{filterDays || "—"} הימים האחרונים (0 = ללא סינון)
+          </label>
           <input
-            type="range" min={1} max={10} value={filterDays}
+            type="range" min={0} max={10} value={filterDays}
             onChange={(e) => setFilterDays(Number(e.target.value))}
             className="w-full"
           />
@@ -224,8 +226,8 @@ export function WeeklySmsForm({
         <div className="info-bar">
           {count === null ? "מחשב נמענים..." : (
             <>
-              כרגע <b>{count}</b> לקוחות תואמים · קהל: {AUD_LABEL[audience]} ·
-              לא ביקרו ב-{filterDays} הימים האחרונים
+              כרגע <b>{count}</b> לקוחות תואמים · קהל: {AUD_LABEL[audience]} ·{" "}
+              {filterDays > 0 ? `נראו ב-${filterDays} הימים האחרונים` : "ללא סינון ימים"}
             </>
           )}
         </div>

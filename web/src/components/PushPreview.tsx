@@ -1,5 +1,8 @@
 "use client";
 
+const APP_ICON =
+  "https://calmarkstorage.blob.core.windows.net/images/1639179770809132219_05d3452b-aa1e-4cf6-835b-da11c2bd8223_logo.jpeg";
+
 /** Desktop-only live preview of a push notification on a phone lock screen. */
 export function PushPreview({
   appName,
@@ -36,12 +39,12 @@ export function PushPreview({
             style={{ background: "rgba(255,255,255,0.14)" }}
           >
             <div className="flex items-center gap-2 mb-1">
-              <span
-                className="grid h-6 w-6 place-items-center rounded-md text-white text-xs font-bold"
-                style={{ background: "linear-gradient(180deg,var(--brand),var(--brand-2))" }}
-              >
-                S
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={APP_ICON}
+                alt="app"
+                className="h-6 w-6 rounded-md object-cover"
+              />
               <span className="text-white/80 text-xs font-medium">
                 {appName || "The Vision"}
               </span>
