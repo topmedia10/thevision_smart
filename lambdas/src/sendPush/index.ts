@@ -1,4 +1,4 @@
-import { ScanCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import * as admin from "firebase-admin";
 import { ddb, TABLES } from "../shared/ddb";
 import { getSecretJson } from "../shared/secrets";
@@ -11,12 +11,13 @@ interface SendPushEvent {
   body?: string;
 }
 
+// All app installs subscribe to this FCM topic (see docs/REACT_NATIVE_FCM.md).
+const TOPIC = process.env.FCM_TOPIC || "all";
+
 let app: admin.app.App | null = null;
 async function getMessaging(): Promise<admin.messaging.Messaging> {
   if (!app) {
-    const serviceAccount = await getSecretJson(
-      process.env.FIREBASE_SECRET_ARN!,
-    );
+    const serviceAccount = await getSecretJson(process.env.FIREBASE_SECRET_ARN!);
     app = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
     });
@@ -24,29 +25,9 @@ async function getMessaging(): Promise<admin.messaging.Messaging> {
   return admin.messaging(app);
 }
 
-async function getAllTokens(): Promise<string[]> {
-  const tokens: string[] = [];
-  let ExclusiveStartKey: Record<string, unknown> | undefined;
-  do {
-    const res = await ddb.send(
-      new ScanCommand({
-        TableName: TABLES.deviceTokens,
-        ProjectionExpression: "#t",
-        ExpressionAttributeNames: { "#t": "token" },
-        ExclusiveStartKey,
-      }),
-    );
-    for (const item of res.Items ?? []) tokens.push((item as { token: string }).token);
-    ExclusiveStartKey = res.LastEvaluatedKey as Record<string, unknown> | undefined;
-  } while (ExclusiveStartKey);
-  return tokens;
-}
-
-export const handler = async (event: SendPushEvent = {}): Promise<{
-  ok: boolean;
-  successCount: number;
-  failureCount: number;
-}> => {
+export const handler = async (
+  event: SendPushEvent = {},
+): Promise<{ ok: boolean; messageId?: string; error?: string }> => {
   let title = event.title;
   let body = event.body;
 
@@ -54,69 +35,30 @@ export const handler = async (event: SendPushEvent = {}): Promise<{
     const wp = await getSettings<WeeklyPushSettings>("weeklyPush");
     if (event.trigger === "weekly" && !wp.enabled) {
       console.log("weekly push disabled");
-      return { ok: true, successCount: 0, failureCount: 0 };
+      return { ok: true };
     }
     title = title ?? wp.title;
     body = body ?? wp.body;
   }
-  if (!title || !body) {
-    throw new Error("push requires title and body");
-  }
+  if (!title || !body) throw new Error("push requires title and body");
 
-  const tokens = await getAllTokens();
-  if (!tokens.length) {
-    await writeRuntime(0);
-    return { ok: true, successCount: 0, failureCount: 0 };
-  }
-
+  // Topic send: one call reaches every subscribed device. FCM returns only a
+  // message id (no per-device count) — that's the accepted trade-off for topics.
   const messaging = await getMessaging();
-  let successCount = 0;
-  let failureCount = 0;
-  const toPrune: string[] = [];
+  const messageId = await messaging.send({
+    topic: TOPIC,
+    notification: { title, body },
+  });
 
-  // FCM multicast cap = 500 tokens per call.
-  for (let i = 0; i < tokens.length; i += 500) {
-    const batch = tokens.slice(i, i + 500);
-    const res = await messaging.sendEachForMulticast({
-      tokens: batch,
-      notification: { title, body },
-    });
-    successCount += res.successCount;
-    failureCount += res.failureCount;
-    res.responses.forEach((r, idx) => {
-      if (!r.success) {
-        const code = r.error?.code ?? "";
-        if (
-          code === "messaging/registration-token-not-registered" ||
-          code === "messaging/invalid-registration-token"
-        ) {
-          toPrune.push(batch[idx]);
-        }
-      }
-    });
-  }
-
-  // Prune dead tokens so the count stays real.
-  for (const token of toPrune) {
-    await ddb.send(
-      new DeleteCommand({ TableName: TABLES.deviceTokens, Key: { token } }),
-    );
-  }
-
-  await writeRuntime(successCount);
-  console.log(
-    `push: success=${successCount} failure=${failureCount} pruned=${toPrune.length}`,
-  );
-  return { ok: true, successCount, failureCount };
-};
-
-async function writeRuntime(count: number): Promise<void> {
   await ddb.send(
     new UpdateCommand({
       TableName: TABLES.settings,
       Key: { pk: "SETTINGS", sk: "runtime" },
-      UpdateExpression: "SET lastPushCount = :c, lastPushSentAt = :t",
-      ExpressionAttributeValues: { ":c": count, ":t": nowIso() },
+      UpdateExpression: "SET lastPushSentAt = :t REMOVE lastPushCount",
+      ExpressionAttributeValues: { ":t": nowIso() },
     }),
   );
-}
+
+  console.log("push sent to topic", { topic: TOPIC, messageId });
+  return { ok: true, messageId };
+};

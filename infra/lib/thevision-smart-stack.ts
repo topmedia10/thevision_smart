@@ -235,9 +235,11 @@ export class TheVisionSmartStack extends cdk.Stack {
     // DynamoDB: grant per-need (read/write) — keep least privilege.
     customers.grantReadWriteData(appointmentWebhookFn);
     settings.grantReadData(appointmentWebhookFn);
+    employees.grantReadData(appointmentWebhookFn); // welcome var replacement (שם_הספר)
 
     customers.grantReadWriteData(reviewsAutomationFn);
     settings.grantReadData(reviewsAutomationFn);
+    employees.grantReadData(reviewsAutomationFn); // review var replacement (שם_הספר)
 
     customers.grantReadData(weeklySmsAutomationFn);
     employees.grantReadData(weeklySmsAutomationFn);

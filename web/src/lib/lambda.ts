@@ -5,8 +5,7 @@ import { SEND_PUSH_FUNCTION_NAME } from "./constants";
 
 export interface PushResult {
   ok: boolean;
-  successCount?: number;
-  failureCount?: number;
+  messageId?: string;
   error?: string;
 }
 
@@ -33,8 +32,8 @@ export async function invokeSendPush(
       : {};
     return {
       ok: payload.ok ?? true,
-      successCount: payload.successCount,
-      failureCount: payload.failureCount,
+      messageId: payload.messageId,
+      error: payload.error,
     };
   } catch (e) {
     return { ok: false, error: String(e) };

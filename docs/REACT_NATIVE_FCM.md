@@ -1,77 +1,75 @@
 # React Native + FCM integration (iOS & Android)
 
-Push uses Firebase Cloud Messaging. The server (sendPush Lambda) sends via the
-Firebase Admin SDK using a **service-account JSON**. Each device registers its
-FCM token to the backend so push counts are real.
+Push uses Firebase Cloud Messaging with a **topic** model. The server (sendPush
+Lambda) sends one message to a topic, and every app install that subscribed to
+that topic receives it. The server authenticates with a **service-account JSON**.
 
 - Firebase project: **`thevision-a496b`**
-- Device registration endpoint (POST JSON `{ token, platform }`):
-  `https://xtj2r7vhq7.execute-api.il-central-1.amazonaws.com/devices/register`
+- Topic: **`all`** (every install subscribes to it on first run)
+
+> Trade-off chosen: topic send is simpler (no token registry, no device table,
+> one line in the app) but FCM does not return a per-device delivery count — so
+> the dashboard shows "last push sent at" rather than an exact number.
 
 ---
 
 ## Part A — Firebase Console (one-time, both platforms)
 
 1. Open https://console.firebase.google.com → project **thevision-a496b**.
-2. **Service account (server side — give this to the backend):**
-   Project Settings (⚙️) → **Service accounts** → **Generate new private key** →
-   downloads a JSON file. **Send this JSON to me** — it goes into AWS Secrets
-   Manager `smart/firebase-service-account` for the push Lambda. Treat it as a
-   secret; never commit it.
+2. **Service account (server side — already provided):** Project Settings (⚙️) →
+   **Service accounts** → **Generate new private key** → JSON. This is stored in
+   AWS Secrets Manager `smart/firebase-service-account` for the push Lambda.
+   (Only needed again if you ever regenerate/revoke that key.)
 
 ---
 
 ## Part B — Android
 
 1. Firebase Console → **Add app → Android**.
-   - **Android package name** = your app's `applicationId` (from
-     `android/app/build.gradle`, e.g. `com.thevision.queue`). Use your existing one.
+   - **Android package name** = your app's `applicationId`
+     (`android/app/build.gradle`). Use your existing one.
    - Register → download **`google-services.json`**.
-2. Put `google-services.json` in **`android/app/google-services.json`**.
-3. `android/build.gradle` (project level) → add to `dependencies`:
+2. Put it in **`android/app/google-services.json`**.
+3. `android/build.gradle` (project) → `dependencies`:
    ```gradle
    classpath 'com.google.gms:google-services:4.4.2'
    ```
-4. `android/app/build.gradle` → at the very top apply the plugin:
+4. `android/app/build.gradle` (top):
    ```gradle
    apply plugin: 'com.google.gms.google-services'
    ```
-   (No APNs needed for Android.)
 
 ---
 
 ## Part C — iOS
 
-### C1. Apple Developer portal (https://developer.apple.com/account)
-1. **Identifiers** → your App ID (bundle id) → enable **Push Notifications**.
-2. **Keys** → **+** → name it, check **Apple Push Notifications service (APNs)**
-   → Continue → Register → **Download the `.p8` file** (one download only).
-   Note the **Key ID** and your **Team ID** (top-right of the portal).
+### C1. Apple Developer (https://developer.apple.com/account)
+1. **Identifiers** → your App ID → enable **Push Notifications**.
+2. **Keys** → **+** → check **Apple Push Notifications service (APNs)** →
+   Register → **download the `.p8`** (one time). Note the **Key ID** + **Team ID**.
 
 ### C2. Firebase Console
-3. **Add app → iOS**.
-   - **Bundle ID** = your app's bundle identifier (Xcode → target → General).
-   - Register → download **`GoogleService-Info.plist`**.
+3. **Add app → iOS** → **Bundle ID** = your app's bundle id → Register →
+   download **`GoogleService-Info.plist`**.
 4. Project Settings → **Cloud Messaging** → **Apple app configuration** →
-   **APNs Authentication Key** → **Upload** the `.p8` + Key ID + Team ID.
+   upload the `.p8` + Key ID + Team ID.
 
 ### C3. Xcode
-5. Drag **`GoogleService-Info.plist`** into the iOS project (target
-   `ios/<AppName>/`), "Copy if needed", add to target.
-6. Target → **Signing & Capabilities** → **+ Capability** → add
-   **Push Notifications** and **Background Modes** → check **Remote notifications**.
+5. Drag **`GoogleService-Info.plist`** into the iOS target.
+6. Target → **Signing & Capabilities** → add **Push Notifications** +
+   **Background Modes → Remote notifications**.
 
 ---
 
-## Part D — What to send me (to wire into the backend)
+## Part D — What the backend needs
 
-| Item | Why |
+| Item | Status |
 |---|---|
-| **Firebase service-account JSON** (Part A) | I load it into `smart/firebase-service-account`; the push Lambda needs it to send. **Required.** |
-| Android **package name** + iOS **bundle ID** | For my records / confirming the RN steps. |
+| **Firebase service-account JSON** | ✅ already stored in Secrets Manager |
 
-The `google-services.json` and `GoogleService-Info.plist` go into **your app**
-(Parts B/C), not the backend — keep them in the app repo.
+That's it — the backend needs nothing per-device. With topics there is **no**
+device-registration endpoint and **no** device table. The `google-services.json`
+and `GoogleService-Info.plist` go into your **app** (Parts B/C), not the backend.
 
 ---
 
@@ -83,29 +81,15 @@ npm i @react-native-firebase/app @react-native-firebase/messaging
 cd ios && pod install && cd ..
 ```
 
-iOS `AppDelegate` — ensure Firebase is configured (RNFirebase v15+ auto-configures
-from the plist; if you initialize manually, call `[FIRApp configure]`).
+iOS `AppDelegate`: RNFirebase v15+ auto-configures from the plist (otherwise call
+`[FIRApp configure]`).
 
-Add a small module and call it on every app open + on token refresh:
+On first run, request permission and **subscribe to the `all` topic** — that's
+the entire integration:
 
 ```ts
 // src/push.ts
 import messaging from '@react-native-firebase/messaging';
-import { Platform } from 'react-native';
-
-const REGISTER_URL =
-  'https://xtj2r7vhq7.execute-api.il-central-1.amazonaws.com/devices/register';
-
-async function sendToken(token: string) {
-  await fetch(REGISTER_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      token,
-      platform: Platform.OS === 'ios' ? 'ios' : 'android',
-    }),
-  });
-}
 
 export async function registerForPush() {
   // iOS needs explicit permission; Android 13+ also prompts.
@@ -115,11 +99,8 @@ export async function registerForPush() {
     status === messaging.AuthorizationStatus.PROVISIONAL;
   if (!granted) return;
 
-  const token = await messaging().getToken();
-  if (token) await sendToken(token);
-
-  // Re-register whenever FCM rotates the token.
-  messaging().onTokenRefresh((t) => sendToken(t));
+  // Subscribe to the broadcast topic. Idempotent — safe to call on every open.
+  await messaging().subscribeToTopic('all');
 }
 ```
 
@@ -134,16 +115,13 @@ useEffect(() => {
 }, []);
 ```
 
-Android 13+ (API 33) also requires the runtime permission
-`POST_NOTIFICATIONS` — `requestPermission()` above triggers it via RNFirebase,
-but make sure `android/app/src/main/AndroidManifest.xml` contains:
+Android 13+ (API 33) also needs the runtime permission in
+`android/app/src/main/AndroidManifest.xml`:
 ```xml
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 ```
 
-That's it — once a device runs this, it appears in `smart-device-tokens`, and
-"שליחת פוש" / the weekly push will reach it. The dashboard's "כמות הודעות פוש
-שנשלחו בשליחה האחרונה" reflects the real multicast success count.
-
-> Note: `/devices/register` is currently open (no auth) for simplicity. If you
-> want it abuse-protected later, we can add a shared header/key the app sends.
+That's the whole thing — once an install subscribes to `all`, every "שליחת פוש"
+and the weekly push automation reach it. To later target groups, you can
+subscribe devices to additional topics (e.g. per branch) and we add topic
+selection in the dashboard.

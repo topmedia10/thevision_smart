@@ -10,7 +10,7 @@ export default async function PushPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">שליחת פוש</h1>
-      <PushForm lastCount={runtime.lastPushCount ?? 0} />
+      <PushForm lastSentAt={runtime.lastPushSentAt} />
     </div>
   );
 }

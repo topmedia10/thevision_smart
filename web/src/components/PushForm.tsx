@@ -3,14 +3,14 @@ import { useState } from "react";
 import { sendPushAction } from "@/app/(admin)/push/actions";
 import { PushResult } from "@/lib/lambda";
 
-export function PushForm({ lastCount }: { lastCount: number }) {
+export function PushForm({ lastSentAt }: { lastSentAt?: string }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<PushResult | null>(null);
 
   async function send() {
-    if (!confirm("לשלוח התראת פוש לכל המכשירים הרשומים?")) return;
+    if (!confirm("לשלוח התראת פוש לכל המכשירים?")) return;
     setBusy(true);
     setResult(null);
     const fd = new FormData();
@@ -24,7 +24,10 @@ export function PushForm({ lastCount }: { lastCount: number }) {
   return (
     <div className="card max-w-xl space-y-4">
       <div className="text-sm text-gray-500">
-        נשלחו בשליחה האחרונה: <span className="font-semibold">{lastCount}</span> הודעות
+        פוש אחרון נשלח:{" "}
+        <span className="font-semibold">
+          {lastSentAt ? new Date(lastSentAt).toLocaleString("he-IL") : "טרם נשלח"}
+        </span>
       </div>
       <div>
         <label className="label">כותרת</label>
@@ -44,9 +47,7 @@ export function PushForm({ lastCount }: { lastCount: number }) {
       </button>
       {result && (
         <div className={`text-sm ${result.ok ? "text-green-600" : "text-red-600"}`}>
-          {result.ok
-            ? `נשלח! הצלחות: ${result.successCount ?? 0}, כשלונות: ${result.failureCount ?? 0}`
-            : `שגיאה: ${result.error}`}
+          {result.ok ? "ההתראה נשלחה ✓" : `שגיאה: ${result.error}`}
         </div>
       )}
     </div>

@@ -24,7 +24,7 @@ interface WebhookBody {
   BusinessId?: string;
   Source?: string;
   EmployeeName?: string;
-  EmployeeId?: string;
+  EmployeeId?: string | number;
 }
 
 const json = (status: number, body: unknown): APIGatewayProxyResultV2 => ({
@@ -73,7 +73,12 @@ export const handler = async (
   const lastVisitAt = endIso;
   const lastAppointmentEnd = addMinutesIso(endIso, delayMinutes);
   const now = nowIso();
-  const employeeId = body.EmployeeId ?? "";
+  // Booking system may send EmployeeId as a number; the employees table PK is a
+  // string, so coerce (and store) it as a string for consistent lookups.
+  const employeeId =
+    body.EmployeeId !== undefined && body.EmployeeId !== null
+      ? String(body.EmployeeId)
+      : "";
 
   const existing = await ddb.send(
     new GetCommand({ TableName: TABLES.customers, Key: { phone } }),

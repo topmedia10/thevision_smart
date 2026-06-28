@@ -57,11 +57,15 @@ export default async function Dashboard() {
           tone={balance.ok ? "brand" : "warn"}
         />
         <StatCard
-          title="הודעות פוש בשליחה האחרונה"
-          value={String(runtime.lastPushCount ?? 0)}
+          title="פוש אחרון נשלח"
+          value={
+            runtime.lastPushSentAt
+              ? new Date(runtime.lastPushSentAt).toLocaleDateString("he-IL")
+              : "—"
+          }
           hint={
             runtime.lastPushSentAt
-              ? new Date(runtime.lastPushSentAt).toLocaleString("he-IL")
+              ? new Date(runtime.lastPushSentAt).toLocaleTimeString("he-IL")
               : "טרם נשלח"
           }
           tone="brand"
