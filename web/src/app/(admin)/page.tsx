@@ -2,7 +2,8 @@ import { requireAdmin } from "@/lib/auth";
 import { fetchBalance } from "@/lib/ec2";
 import { getSettings, RuntimeSettings } from "@/lib/settings";
 import { getCustomersCount, getRecentActivity } from "@/lib/stats";
-import { formatDateTime, formatDate, formatTime } from "@/lib/format";
+import { formatDate, formatTime } from "@/lib/format";
+import { ActivityTable } from "@/components/ActivityTable";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function Dashboard() {
     fetchBalance(),
     getSettings<RuntimeSettings>("runtime"),
     getCustomersCount(),
-    getRecentActivity(8),
+    getRecentActivity(50),
   ]);
 
   const name = [emp.firstName, emp.lastName].filter(Boolean).join(" ");
@@ -64,36 +65,9 @@ export default async function Dashboard() {
         <StatCard title="סך הלקוחות" value={String(customers)} />
       </div>
 
-      <div className="card">
-        <h2 className="font-semibold mb-3">פעילות אחרונה</h2>
-        {activity.length === 0 ? (
-          <p className="faint text-sm">אין פעילות עדיין</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="muted text-right">
-                <tr>
-                  <th className="py-2 font-medium">תאריך</th>
-                  <th className="py-2 font-medium">מקור</th>
-                  <th className="py-2 font-medium">הודעה</th>
-                  <th className="py-2 font-medium">קרדיט</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activity.map((a, i) => (
-                  <tr key={i} style={{ borderTop: "1px solid var(--border-soft)" }}>
-                    <td className="py-2 whitespace-nowrap muted">
-                      {formatDateTime(a.sentAt)}
-                    </td>
-                    <td className="py-2">{a.source}</td>
-                    <td className="py-2 max-w-xs truncate">{a.message}</td>
-                    <td className="py-2">{a.credits ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="space-y-3">
+        <h2 className="font-semibold">פעילות אחרונה</h2>
+        <ActivityTable rows={activity} />
       </div>
     </div>
   );
