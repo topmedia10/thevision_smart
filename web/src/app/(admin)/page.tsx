@@ -51,7 +51,7 @@ export default async function Dashboard() {
         <p className="muted">מבט מהיר על המערכת</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
           title="יתרת SMS"
           value={balance.ok ? String(balance.balance) : "—"}
@@ -64,12 +64,13 @@ export default async function Dashboard() {
           hint={runtime.lastPushSentAt ? formatTime(runtime.lastPushSentAt) : "טרם נשלח"}
           tone="brand"
         />
-        <StatCard title="סך הלקוחות" value={String(customers)} />
-        <StatCard
-          title="ביקשו הסרה"
-          value={String(unsubscribed)}
-          hint="לקוחות שהוסרו מהתפוצה"
-        />
+        <div className="card">
+          <div className="muted text-sm">סך הלקוחות</div>
+          <div className="text-3xl font-bold mt-1.5">{customers}</div>
+          <div className="faint text-xs mt-2">
+            ביקשו הסרה: <span className="font-medium">{unsubscribed}</span>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-3">
