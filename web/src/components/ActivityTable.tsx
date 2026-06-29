@@ -54,7 +54,6 @@ export function ActivityTable({
                 <th className="py-3 px-4 font-medium">הודעה</th>
                 {showRecipients && <th className="py-3 px-4 font-medium">נמענים</th>}
                 <th className="py-3 px-4 font-medium">קרדיט</th>
-                <th className="py-3 px-4 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -65,7 +64,7 @@ export function ActivityTable({
                     <span className="chip">{SOURCE_LABEL[r.source] ?? r.source}</span>
                   </td>
                   <td
-                    className="py-3 px-4 max-w-xs truncate cursor-pointer hover:underline"
+                    className="py-3 px-4 max-w-xs truncate cursor-pointer"
                     onClick={() => setOpen(r.message)}
                     title="לחצו לצפייה"
                   >
@@ -73,15 +72,6 @@ export function ActivityTable({
                   </td>
                   {showRecipients && <td className="py-3 px-4">{r.recipientsCount ?? 1}</td>}
                   <td className="py-3 px-4">{r.credits ?? "—"}</td>
-                  <td className="py-3 px-4">
-                    <button
-                      className="toolbtn"
-                      onClick={() => setOpen(r.message)}
-                      title="צפייה בהודעה"
-                    >
-                      👁
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -89,28 +79,23 @@ export function ActivityTable({
         </div>
         {pages > 1 && (
           <div
-            className="flex items-center justify-between px-4 py-3"
+            className="flex items-center justify-end gap-2 px-4 py-3"
             style={{ borderTop: "1px solid var(--border-soft)" }}
           >
-            <span className="faint text-sm">
-              עמוד {cur + 1} מתוך {pages}
-            </span>
-            <div className="flex gap-2">
-              <button
-                className="toolbtn"
-                disabled={cur === 0}
-                onClick={() => setPage(cur - 1)}
-              >
-                ‹ הקודם
-              </button>
-              <button
-                className="toolbtn"
-                disabled={cur >= pages - 1}
-                onClick={() => setPage(cur + 1)}
-              >
-                הבא ›
-              </button>
-            </div>
+            <button
+              className="toolbtn"
+              disabled={cur === 0}
+              onClick={() => setPage(cur - 1)}
+            >
+              ‹ הקודם
+            </button>
+            <button
+              className="toolbtn"
+              disabled={cur >= pages - 1}
+              onClick={() => setPage(cur + 1)}
+            >
+              הבא ›
+            </button>
           </div>
         )}
       </div>
