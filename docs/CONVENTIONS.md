@@ -16,8 +16,11 @@ actual names from environment variables (set from CDK outputs at deploy/config t
 | Settings table | `smart-settings` | PK `SETTINGS`, SK = group |
 | SavedMessages table | `smart-saved-messages` | PK `id` |
 | SmsActivityLog table | `smart-sms-activity-log` | PK `LOG`, SK `sentAt#id` |
-| DeviceTokens table | `smart-device-tokens` | PK `token` |
 | SmsIdempotency table | `smart-sms-idempotency` | PK `dedupKey`, TTL `ttl` (~7 days) |
+
+> Note: push now uses FCM **topic `all`** — the device-token registry table and
+> `/devices/register` endpoint were removed. Customers also have GSI
+> `audience-index` (PK `unsubscribe`, SK `lastVisitAt`) for audience filtering.
 | Main queue | `sms-outbox` | |
 | DLQ | `sms-outbox-dlq` | maxReceiveCount 4 |
 

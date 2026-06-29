@@ -26,7 +26,8 @@ names/ARNs and fetch at runtime. Resource names come from CDK outputs.
 |---|---|
 | `AWS_REGION` | `il-central-1` |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | access key for IAM user `smart-vercel` |
-| `TABLE_CUSTOMERS` … `TABLE_DEVICE_TOKENS` | from CDK outputs |
+| `TABLE_CUSTOMERS` … `TABLE_SMS_IDEMPOTENCY` | from CDK outputs |
+| `GSI_AUDIENCE_INDEX` | `audience-index` |
 | `GSI_REVIEW_INDEX` / `GSI_PHONE_INDEX` | |
 | `SQS_QUEUE_URL` | |
 | `SEND_PUSH_FUNCTION_NAME` | `smart-sendPush` |
@@ -40,6 +41,5 @@ names/ARNs and fetch at runtime. Resource names come from CDK outputs.
 | `TIMEZONE` | `Asia/Jerusalem` |
 
 ## React Native app
-| Var | Notes |
-|---|---|
-| `DEVICE_REGISTER_URL` | CDK output `DeviceRegisterUrl` |
+Push uses FCM **topic `all`** — the app only calls `subscribeToTopic('all')`
+(no backend env needed). See `docs/REACT_NATIVE_FCM.md`.

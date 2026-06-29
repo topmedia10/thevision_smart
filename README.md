@@ -29,14 +29,21 @@ Hebrew (RTL) admin panel + AWS automation backend for SMS (Global SMS) and push
   reCAPTCHA / throttling). Auth cookies are `httpOnly` `Secure` `SameSite`,
   encrypted via iron-session.
 
-## Build status
+## Build status — LIVE
 
 - [x] Monorepo scaffold + conventions
-- [x] CDK stack (synthesizes — 55 resources)
-- [~] Lambdas (implemented; pending deploy + integration test)
-- [ ] EC2 services (API + SQS worker)
-- [ ] Next.js admin panel + unsubscribe page
-- [ ] README deploy guide, runbooks, RN integration, open-items checklist
+- [x] CDK stack deployed (`il-central-1`)
+- [x] Lambdas deployed + integration-tested (webhook, reviews, weekly, push, balance)
+- [x] EC2 services live (API + SQS worker + Global SMS **SOAP** client; HTTPS via Cloudflare Origin Cert)
+- [x] Next.js admin live at `smart.thevision.co.il` (dark RTL) + unsubscribe page
+- [x] Docs: per-part `CLAUDE.md`, RN FCM guide, open-items checklist
+
+**Start here:** [CLAUDE.md](CLAUDE.md) (master reference) ·
+[docs/OPEN_ITEMS.md](docs/OPEN_ITEMS.md) (what's left / your inputs) ·
+per-part docs in `infra/`, `lambdas/`, `ec2/`, `web/`.
+
+> Push uses **FCM topics** (the device-token registry was removed). SMS uses the
+> Global SMS **SOAP** API. Audience filtering uses the `audience-index` GSI.
 
 ## Deploy (high level)
 
