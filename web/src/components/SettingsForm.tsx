@@ -9,7 +9,7 @@ export function SettingsForm({
   alerts,
 }: {
   business: BusinessInfo;
-  audience: { activeMonths?: number; stoppedMonths?: number; inactiveMonths?: number };
+  audience: { activeMonths?: number; inactiveMonths?: number };
   alerts: {
     lowBalanceThreshold?: number;
     lowBalanceMessage?: string;
@@ -18,7 +18,6 @@ export function SettingsForm({
 }) {
   const [b, setB] = useState<BusinessInfo>(business);
   const [active, setActive] = useState(audience.activeMonths ?? 3);
-  const [stopped, setStopped] = useState(audience.stoppedMonths ?? 6);
   const [inactive, setInactive] = useState(audience.inactiveMonths ?? 12);
   const [threshold, setThreshold] = useState(alerts.lowBalanceThreshold ?? 200);
   const [lowMsg, setLowMsg] = useState(alerts.lowBalanceMessage ?? "");
@@ -38,7 +37,6 @@ export function SettingsForm({
     fd.set("googleReviewLink", b.googleReviewLink || "");
     fd.set("smsUnsubscribeLink", b.smsUnsubscribeLink || "");
     fd.set("activeMonths", String(active));
-    fd.set("stoppedMonths", String(stopped));
     fd.set("inactiveMonths", String(inactive));
     fd.set("lowBalanceThreshold", String(threshold));
     fd.set("lowBalanceMessage", lowMsg);
@@ -77,22 +75,19 @@ export function SettingsForm({
 
       <section className="card space-y-3">
         <h2 className="font-semibold text-lg">הגדרות קהל לקוחות</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="label">פעילים: ביקרו ב-{active} החודשים האחרונים</label>
+            <label className="label">פעילים — לקוחות עם תור ב-{active} החודשים האחרונים</label>
             <input type="number" min={1} max={12} className="input" value={active} onChange={(e) => setActive(Number(e.target.value))} />
           </div>
           <div>
-            <label className="label">הפסיקו להגיע: מעל {stopped} חודשים</label>
-            <input type="number" min={1} max={12} className="input" value={stopped} onChange={(e) => setStopped(Number(e.target.value))} />
-          </div>
-          <div>
-            <label className="label">לא פעילים: מעל {inactive} חודשים</label>
+            <label className="label">לא פעילים — לקוחות ללא תור מעל {inactive} חודשים</label>
             <input type="number" min={1} max={12} className="input" value={inactive} onChange={(e) => setInactive(Number(e.target.value))} />
           </div>
         </div>
         <p className="text-xs muted">
-          &quot;הפסיקו להגיע&quot; הוא הטווח שבין הסף שלו לסף &quot;לא פעילים&quot; (חייב להיות קטן ממנו).
+          <b>הפסיקו להגיע</b> = לקוחות שלא היה להם תור ב-{active} החודשים האחרונים, אבל
+          כן היה להם תור ב-{inactive} החודשים האחרונים. (מספר &quot;פעילים&quot; חייב להיות קטן מ&quot;לא פעילים&quot;.)
         </p>
       </section>
 

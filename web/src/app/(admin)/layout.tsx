@@ -19,7 +19,7 @@ export default async function AdminLayout({
   return (
     <div className="flex min-h-screen">
       <Sidebar name={name} logoutAction={logoutAction} />
-      <main className="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full">
+      <main className="flex-1 p-4 md:p-8 pt-16 md:pt-8 max-w-6xl mx-auto w-full">
         {children}
       </main>
     </div>

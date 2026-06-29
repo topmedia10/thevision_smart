@@ -18,4 +18,5 @@ export const TABLES = {
 export const INDEXES = {
   reviewIndex: process.env.GSI_REVIEW_INDEX || "review-index",
   phoneIndex: process.env.GSI_PHONE_INDEX || "phone-index",
+  audienceIndex: process.env.GSI_AUDIENCE_INDEX || "audience-index",
 };

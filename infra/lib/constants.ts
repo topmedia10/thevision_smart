@@ -23,6 +23,7 @@ export const TABLES = {
 export const GSI = {
   reviewIndex: "review-index", // customers: PK sentReview, SK lastAppointmentEnd
   phoneIndex: "phone-index", // employees: PK phone
+  audienceIndex: "audience-index", // customers: PK unsubscribe, SK lastVisitAt
 } as const;
 
 export const QUEUES = {

@@ -1,7 +1,7 @@
 import "server-only";
-import { ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { ScanCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { ddb } from "./aws/clients";
-import { TABLES } from "./constants";
+import { TABLES, INDEXES } from "./constants";
 import { AudienceSettings } from "./settings";
 
 export interface Customer {
@@ -16,115 +16,140 @@ export interface Customer {
 
 export type AudienceKind = "active" | "stopped" | "inactive";
 
-function monthsAgo(months: number): Date {
+function monthsAgoIso(months: number): string {
   const d = new Date();
   d.setMonth(d.getMonth() - months);
-  return d;
-}
-
-/** Scan all customers (small base per business). */
-async function scanAll(): Promise<Customer[]> {
-  const out: Customer[] = [];
-  let ExclusiveStartKey: Record<string, unknown> | undefined;
-  do {
-    const res = await ddb.send(
-      new ScanCommand({ TableName: TABLES.customers, ExclusiveStartKey }),
-    );
-    for (const i of res.Items ?? []) out.push(i as Customer);
-    ExclusiveStartKey = res.LastEvaluatedKey as Record<string, unknown> | undefined;
-  } while (ExclusiveStartKey);
-  return out;
-}
-
-/** Bucket a customer by lastVisitAt against the audience thresholds. */
-function bucketOf(
-  c: Customer,
-  audience: AudienceSettings,
-): AudienceKind | null {
-  if (!c.lastVisitAt) return null;
-  const visit = new Date(c.lastVisitAt).getTime();
-  const activeCut = monthsAgo(audience.activeMonths ?? 3).getTime();
-  const stoppedCut = monthsAgo(audience.stoppedMonths ?? 6).getTime();
-  const inactiveCut = monthsAgo(audience.inactiveMonths ?? 12).getTime();
-  if (visit >= activeCut) return "active";
-  // stopped = band between inactive threshold (older) and stopped threshold (newer)
-  if (visit < stoppedCut && visit >= inactiveCut) return "stopped";
-  if (visit < inactiveCut) return "inactive";
-  return null; // falls in a gap (e.g. between active and stopped thresholds)
+  return d.toISOString();
 }
 
 export interface ResolveOpts {
   audience?: AudienceKind | "all";
   employeeId?: string; // "" / "all" = no filter
-  filterDays?: number; // optional: visited within the last N days
+  filterDays?: number; // exclude customers who visited within the last N days
 }
 
 /**
- * Resolve manual-send recipients: audience bucket + employee + optional
- * last-N-days filter, always excluding unsubscribed.
+ * Compute the lastVisitAt [lo, hi) bounds for an audience + days filter.
+ *   active   : visited within activeMonths            → lo = activeCut
+ *   stopped  : between inactiveMonths and activeMonths → [inactiveCut, activeCut)
+ *   inactive : older than inactiveMonths              → hi = inactiveCut
+ * Days filter EXCLUDES recent visitors → upper bound capped at (now - days).
  */
+function audienceRange(
+  audience: ResolveOpts["audience"],
+  s: AudienceSettings,
+  filterDays?: number,
+): { lo: string | null; hi: string | null } {
+  const activeCut = monthsAgoIso(s.activeMonths ?? 3);
+  const inactiveCut = monthsAgoIso(s.inactiveMonths ?? 12);
+  let lo: string | null = null;
+  let hi: string | null = null;
+  if (audience === "active") lo = activeCut;
+  else if (audience === "stopped") {
+    lo = inactiveCut;
+    hi = activeCut;
+  } else if (audience === "inactive") hi = inactiveCut;
+
+  if (filterDays && filterDays > 0) {
+    const daysCut = new Date(Date.now() - filterDays * 86400000).toISOString();
+    hi = hi === null ? daysCut : daysCut < hi ? daysCut : hi;
+  }
+  return { lo, hi };
+}
+
+async function runAudienceQuery(
+  opts: ResolveOpts,
+  s: AudienceSettings,
+  count: boolean,
+): Promise<Customer[] | number> {
+  const { lo, hi } = audienceRange(opts.audience, s, opts.filterDays);
+  if (lo !== null && hi !== null && lo > hi) return count ? 0 : []; // empty range
+
+  // Sort-key condition on lastVisitAt.
+  let sk = "";
+  const values: Record<string, unknown> = { ":u": "0" };
+  if (lo !== null && hi !== null) {
+    sk = " AND lastVisitAt BETWEEN :lo AND :hi";
+    values[":lo"] = lo;
+    values[":hi"] = hi;
+  } else if (lo !== null) {
+    sk = " AND lastVisitAt >= :lo";
+    values[":lo"] = lo;
+  } else if (hi !== null) {
+    sk = " AND lastVisitAt < :hi";
+    values[":hi"] = hi;
+  }
+
+  const names: Record<string, string> = {};
+  let filter: string | undefined;
+  if (opts.employeeId && opts.employeeId !== "all") {
+    filter = "#e = :e";
+    names["#e"] = "employeeId";
+    values[":e"] = opts.employeeId;
+  }
+
+  const items: Customer[] = [];
+  let total = 0;
+  let ExclusiveStartKey: Record<string, unknown> | undefined;
+  do {
+    const res = await ddb.send(
+      new QueryCommand({
+        TableName: TABLES.customers,
+        IndexName: INDEXES.audienceIndex,
+        KeyConditionExpression: `unsubscribe = :u${sk}`,
+        FilterExpression: filter,
+        ExpressionAttributeNames: Object.keys(names).length ? names : undefined,
+        ExpressionAttributeValues: values,
+        Select: count ? "COUNT" : undefined,
+        ExclusiveStartKey,
+      }),
+    );
+    if (count) total += res.Count ?? 0;
+    else for (const i of res.Items ?? []) items.push(i as Customer);
+    ExclusiveStartKey = res.LastEvaluatedKey as Record<string, unknown> | undefined;
+  } while (ExclusiveStartKey);
+
+  return count ? total : items;
+}
+
+/** Manual-send recipients: audience + employee + days, excluding unsubscribed. */
 export async function resolveRecipients(
   opts: ResolveOpts,
-  audienceSettings: AudienceSettings,
+  s: AudienceSettings,
 ): Promise<Customer[]> {
-  const all = await scanAll();
-  const filterCut =
-    opts.filterDays && opts.filterDays > 0
-      ? Date.now() - opts.filterDays * 86400000
-      : null;
-
-  return all.filter((c) => {
-    if (c.unsubscribe && c.unsubscribe !== "0") return false;
-    if (opts.employeeId && opts.employeeId !== "all" && c.employeeId !== opts.employeeId)
-      return false;
-    if (opts.audience && opts.audience !== "all") {
-      if (bucketOf(c, audienceSettings) !== opts.audience) return false;
-    }
-    // Exclude anyone who visited within the last filterDays days.
-    if (filterCut !== null) {
-      if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() >= filterCut)
-        return false;
-    }
-    return true;
-  });
+  return (await runAudienceQuery(opts, s, false)) as Customer[];
 }
 
-/** Count manual-send recipients matching the current filters. */
-export async function countManual(
-  opts: ResolveOpts,
-  audienceSettings: AudienceSettings,
-): Promise<number> {
-  return (await resolveRecipients(opts, audienceSettings)).length;
+export async function countManual(opts: ResolveOpts, s: AudienceSettings): Promise<number> {
+  return (await runAudienceQuery(opts, s, true)) as number;
 }
 
-/**
- * Weekly-SMS count: audience bucket, EXCLUDING anyone who visited within the
- * last filterDays days (filterDays = 0 → no day filter), excluding unsubscribed.
- */
+/** Weekly count: audience + days (no employee), excluding unsubscribed. */
 export async function countWeekly(
   filterDays: number,
   audience: AudienceKind | "all",
-  audienceSettings: AudienceSettings,
+  s: AudienceSettings,
 ): Promise<number> {
-  const cut = filterDays > 0 ? Date.now() - filterDays * 86400000 : null;
-  const all = await scanAll();
-  return all.filter((c) => {
-    if (c.unsubscribe && c.unsubscribe !== "0") return false;
-    if (audience && audience !== "all" && bucketOf(c, audienceSettings) !== audience)
-      return false;
-    if (cut !== null) {
-      if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() >= cut) return false;
-    }
-    return true;
-  }).length;
+  return (await runAudienceQuery({ audience, employeeId: "all", filterDays }, s, true)) as number;
 }
 
-/** Map employeeId → assigned customer count (for the employees page). */
+/** Total customers per employee (stats — full scan, runs once per page). */
 export async function customerCountsByEmployee(): Promise<Record<string, number>> {
-  const all = await scanAll();
   const counts: Record<string, number> = {};
-  for (const c of all) {
-    if (c.employeeId) counts[c.employeeId] = (counts[c.employeeId] ?? 0) + 1;
-  }
+  let ExclusiveStartKey: Record<string, unknown> | undefined;
+  do {
+    const res = await ddb.send(
+      new ScanCommand({
+        TableName: TABLES.customers,
+        ProjectionExpression: "employeeId",
+        ExclusiveStartKey,
+      }),
+    );
+    for (const i of res.Items ?? []) {
+      const e = (i as Customer).employeeId;
+      if (e) counts[e] = (counts[e] ?? 0) + 1;
+    }
+    ExclusiveStartKey = res.LastEvaluatedKey as Record<string, unknown> | undefined;
+  } while (ExclusiveStartKey);
   return counts;
 }

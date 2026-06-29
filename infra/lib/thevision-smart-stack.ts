@@ -51,6 +51,14 @@ export class TheVisionSmartStack extends cdk.Stack {
         type: dynamodb.AttributeType.STRING,
       },
     });
+    // Audience filtering: PK unsubscribe ("0" = subscribed), SK lastVisitAt.
+    // Querying PK="0" with a lastVisitAt range serves audience + days filters
+    // efficiently and inherently excludes unsubscribed customers.
+    customers.addGlobalSecondaryIndex({
+      indexName: GSI.audienceIndex,
+      partitionKey: { name: "unsubscribe", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "lastVisitAt", type: dynamodb.AttributeType.STRING },
+    });
 
     const employees = new dynamodb.Table(this, "Employees", {
       tableName: TABLES.employees,
@@ -148,6 +156,7 @@ export class TheVisionSmartStack extends cdk.Stack {
       TABLE_SMS_IDEMPOTENCY: TABLES.smsIdempotency,
       GSI_REVIEW_INDEX: GSI.reviewIndex,
       GSI_PHONE_INDEX: GSI.phoneIndex,
+      GSI_AUDIENCE_INDEX: GSI.audienceIndex,
       SQS_QUEUE_URL: outbox.queueUrl,
       TZ: TIMEZONE,
     };

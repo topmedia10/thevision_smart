@@ -42,63 +42,66 @@ export async function queryReviewDue(nowIso: string): Promise<Customer[]> {
 
 export type AudienceKind = "active" | "stopped" | "inactive";
 
-function monthsAgoMs(months: number): number {
+function monthsAgoIso(months: number): string {
   const d = new Date();
   d.setMonth(d.getMonth() - months);
-  return d.getTime();
-}
-
-/** Bucket a customer by lastVisitAt against audience thresholds (months). */
-export function audienceBucket(
-  c: Customer,
-  s: { activeMonths?: number; stoppedMonths?: number; inactiveMonths?: number },
-): AudienceKind | null {
-  if (!c.lastVisitAt) return null;
-  const v = new Date(c.lastVisitAt).getTime();
-  if (v >= monthsAgoMs(s.activeMonths ?? 3)) return "active";
-  if (v < monthsAgoMs(s.stoppedMonths ?? 6) && v >= monthsAgoMs(s.inactiveMonths ?? 12))
-    return "stopped";
-  if (v < monthsAgoMs(s.inactiveMonths ?? 12)) return "inactive";
-  return null;
+  return d.toISOString();
 }
 
 /**
- * Weekly-SMS recipients: subscribed customers, optionally in an audience bucket,
- * EXCLUDING anyone who visited within the last `filterDays` days
- * (filterDays = 0 → no day filter). Shared by the weekly send and its pre-check.
+ * Weekly-SMS recipients via the audience-index GSI (PK unsubscribe="0", SK
+ * lastVisitAt). Audience bucket + days filter become a lastVisitAt range;
+ * unsubscribed are inherently excluded. EXCLUDES anyone who visited within the
+ * last `filterDays` days (filterDays = 0 → no day filter).
  */
 export async function selectWeeklyRecipients(
   filterDays: number,
   audienceKind: string,
-  audienceSettings: {
-    activeMonths?: number;
-    stoppedMonths?: number;
-    inactiveMonths?: number;
-  },
+  s: { activeMonths?: number; inactiveMonths?: number },
 ): Promise<Customer[]> {
-  const all: Customer[] = [];
+  const activeCut = monthsAgoIso(s.activeMonths ?? 3);
+  const inactiveCut = monthsAgoIso(s.inactiveMonths ?? 12);
+  let lo: string | null = null;
+  let hi: string | null = null;
+  if (audienceKind === "active") lo = activeCut;
+  else if (audienceKind === "stopped") {
+    lo = inactiveCut;
+    hi = activeCut;
+  } else if (audienceKind === "inactive") hi = inactiveCut;
+  if (filterDays > 0) {
+    const dc = new Date(Date.now() - filterDays * 86400000).toISOString();
+    hi = hi === null ? dc : dc < hi ? dc : hi;
+  }
+  if (lo !== null && hi !== null && lo > hi) return [];
+
+  let sk = "";
+  const values: Record<string, unknown> = { ":u": "0" };
+  if (lo !== null && hi !== null) {
+    sk = " AND lastVisitAt BETWEEN :lo AND :hi";
+    values[":lo"] = lo;
+    values[":hi"] = hi;
+  } else if (lo !== null) {
+    sk = " AND lastVisitAt >= :lo";
+    values[":lo"] = lo;
+  } else if (hi !== null) {
+    sk = " AND lastVisitAt < :hi";
+    values[":hi"] = hi;
+  }
+
+  const out: Customer[] = [];
   let ExclusiveStartKey: Record<string, unknown> | undefined;
   do {
     const res = await ddb.send(
-      new ScanCommand({
+      new QueryCommand({
         TableName: TABLES.customers,
-        FilterExpression: "unsubscribe = :u",
-        ExpressionAttributeValues: { ":u": "0" },
+        IndexName: INDEXES.audienceIndex,
+        KeyConditionExpression: `unsubscribe = :u${sk}`,
+        ExpressionAttributeValues: values,
         ExclusiveStartKey,
       }),
     );
-    for (const item of res.Items ?? []) all.push(item as Customer);
+    for (const item of res.Items ?? []) out.push(item as Customer);
     ExclusiveStartKey = res.LastEvaluatedKey as Record<string, unknown> | undefined;
   } while (ExclusiveStartKey);
-
-  const cut = filterDays > 0 ? Date.now() - filterDays * 86400000 : null;
-  return all.filter((c) => {
-    if (audienceKind !== "all" && audienceBucket(c, audienceSettings) !== audienceKind)
-      return false;
-    // Exclude anyone who visited within the last filterDays days.
-    if (cut !== null) {
-      if (!c.lastVisitAt || new Date(c.lastVisitAt).getTime() >= cut) return false;
-    }
-    return true;
-  });
+  return out;
 }

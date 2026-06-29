@@ -44,7 +44,6 @@ export interface WeeklyPushSettings {
 }
 export interface AudienceSettings {
   activeMonths?: number;
-  stoppedMonths?: number;
   inactiveMonths?: number;
 }
 export interface AlertsSettings {

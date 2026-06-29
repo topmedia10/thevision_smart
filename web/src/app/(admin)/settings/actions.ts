@@ -25,17 +25,15 @@ export async function saveSettingsAction(
   });
 
   const active = clamp(Number(formData.get("activeMonths") || 3), 1, 12);
-  const stopped = clamp(Number(formData.get("stoppedMonths") || 6), 1, 12);
   const inactive = clamp(Number(formData.get("inactiveMonths") || 12), 1, 12);
-  if (!(stopped < inactive)) {
+  if (!(active < inactive)) {
     return {
       ok: false,
-      error: "סף 'הפסיקו להגיע' חייב להיות קטן מסף 'לא פעילים'",
+      error: "מספר החודשים של 'פעילים' חייב להיות קטן מזה של 'לא פעילים'",
     };
   }
   await putSettings("audience", {
     activeMonths: active,
-    stoppedMonths: stopped,
     inactiveMonths: inactive,
   } satisfies AudienceSettings);
 
