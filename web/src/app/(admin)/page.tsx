@@ -69,7 +69,6 @@ export default async function Dashboard() {
           title="ביקשו הסרה"
           value={String(unsubscribed)}
           hint="לקוחות שהוסרו מהתפוצה"
-          tone="warn"
         />
       </div>
 
