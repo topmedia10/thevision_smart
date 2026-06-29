@@ -1,7 +1,7 @@
 import { requireAdmin } from "@/lib/auth";
 import { fetchBalance } from "@/lib/ec2";
 import { getSettings, RuntimeSettings } from "@/lib/settings";
-import { getCustomersCount, getRecentActivity } from "@/lib/stats";
+import { getCustomersCount, getSubscribedCount, getRecentActivity } from "@/lib/stats";
 import { formatDate, formatTime } from "@/lib/format";
 import { ActivityTable } from "@/components/ActivityTable";
 
@@ -33,12 +33,14 @@ function StatCard({
 
 export default async function Dashboard() {
   const emp = await requireAdmin();
-  const [balance, runtime, customers, activity] = await Promise.all([
+  const [balance, runtime, customers, subscribed, activity] = await Promise.all([
     fetchBalance(),
     getSettings<RuntimeSettings>("runtime"),
     getCustomersCount(),
+    getSubscribedCount(),
     getRecentActivity(50),
   ]);
+  const unsubscribed = Math.max(0, customers - subscribed);
 
   const name = [emp.firstName, emp.lastName].filter(Boolean).join(" ");
 
@@ -49,7 +51,7 @@ export default async function Dashboard() {
         <p className="muted">מבט מהיר על המערכת</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="יתרת SMS"
           value={balance.ok ? String(balance.balance) : "—"}
@@ -63,6 +65,12 @@ export default async function Dashboard() {
           tone="brand"
         />
         <StatCard title="סך הלקוחות" value={String(customers)} />
+        <StatCard
+          title="ביקשו הסרה"
+          value={String(unsubscribed)}
+          hint="לקוחות שהוסרו מהתפוצה"
+          tone="warn"
+        />
       </div>
 
       <div className="space-y-3">

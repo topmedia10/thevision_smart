@@ -1,7 +1,7 @@
 import "server-only";
 import { ScanCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { ddb } from "./aws/clients";
-import { TABLES } from "./constants";
+import { TABLES, INDEXES } from "./constants";
 
 /** Total customers (Scan COUNT — base is small per business). */
 export async function getCustomersCount(): Promise<number> {
@@ -11,6 +11,27 @@ export async function getCustomersCount(): Promise<number> {
     const res = await ddb.send(
       new ScanCommand({
         TableName: TABLES.customers,
+        Select: "COUNT",
+        ExclusiveStartKey,
+      }),
+    );
+    count += res.Count ?? 0;
+    ExclusiveStartKey = res.LastEvaluatedKey as Record<string, unknown> | undefined;
+  } while (ExclusiveStartKey);
+  return count;
+}
+
+/** Count of subscribed customers (unsubscribe="0") via the audience-index GSI. */
+export async function getSubscribedCount(): Promise<number> {
+  let count = 0;
+  let ExclusiveStartKey: Record<string, unknown> | undefined;
+  do {
+    const res = await ddb.send(
+      new QueryCommand({
+        TableName: TABLES.customers,
+        IndexName: INDEXES.audienceIndex,
+        KeyConditionExpression: "unsubscribe = :u",
+        ExpressionAttributeValues: { ":u": "0" },
         Select: "COUNT",
         ExclusiveStartKey,
       }),

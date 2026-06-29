@@ -79,9 +79,13 @@ export function ActivityTable({
         </div>
         {pages > 1 && (
           <div
-            className="flex items-center justify-end gap-2 px-4 py-3"
+            className="flex items-center justify-between gap-2 px-4 py-3"
             style={{ borderTop: "1px solid var(--border-soft)" }}
           >
+            <span className="faint text-sm">
+              עמוד {cur + 1} מתוך {pages}
+            </span>
+            <div className="flex gap-2">
             <button
               className="toolbtn"
               disabled={cur === 0}
@@ -96,6 +100,7 @@ export function ActivityTable({
             >
               הבא ›
             </button>
+            </div>
           </div>
         )}
       </div>
